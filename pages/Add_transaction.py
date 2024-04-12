@@ -1,15 +1,24 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
+
+def connect_db():
+    conn = sqlite3.connect("transactions.db")
+    return conn
 
 def load_data():
+    conn = connect_db()
     try:
-        df = pd.read_csv("transactions.csv")
-    except FileNotFoundError:
+        df = pd.read_sql("SELECT * FROM transactions", conn)
+    except pd.io.sql.DatabaseError:  # If the table doesn't exist
         df = pd.DataFrame(columns=["Type", "Name", "Category", "Amount", "Date"])
+    conn.close()
     return df
 
 def save_data(df):
-    df.to_csv("Transactions.csv", index=False)
+    conn = connect_db()
+    df.to_sql("transactions", conn, if_exists="replace", index=False)
+    conn.close()
 
 def add_transaction():
     st.title("Add Transaction")
