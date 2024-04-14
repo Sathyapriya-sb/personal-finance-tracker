@@ -1,29 +1,21 @@
 import streamlit as st
-import pandas as pd
-import sqlite3
-
-def connect_db():
-    conn = sqlite3.connect("transactions.db")
-    return conn
 
 def load_data():
-    conn = connect_db()
     try:
-        df = pd.read_sql("SELECT * FROM transactions", conn)
-    except pd.io.sql.DatabaseError:
-        df = pd.DataFrame(columns=["Type", "Name", "Category", "Amount", "Date"])
-    conn.close()
-    return df
+        transactions = st.session_state.transactions
+    except AttributeError:
+        st.session_state.transactions = []
+        transactions = []
+    return transactions
 
 def main():
     st.title("Your Transactions")
-    df = load_data()
-    df = df.sort_values(by="Date", ascending=False).reset_index(drop=True)
-    df.index += 1  # Increment index by 1
+    transactions = load_data()
+    transactions_sorted = sorted(transactions, key=lambda x: x["Date"], reverse=True)
 
     # Calculate sum of income, sum of expenses, and total
-    income = df[df['Type'] == 'Income']['Amount'].sum()
-    expenses = df[df['Type'] == 'Expense']['Amount'].sum()
+    income = sum(t["Amount"] for t in transactions if t["Type"] == "Income")
+    expenses = sum(t["Amount"] for t in transactions if t["Type"] == "Expense")
     total = income - expenses
     
     # Display sums as three columns next to each other
@@ -35,7 +27,10 @@ def main():
     with col3:
         st.write("##### Balance:", total)
 
-    st.table(df)
+    if transactions:
+        st.table(transactions_sorted)
+    else:
+        st.warning("No transactions found!")
 
 if __name__ == "__main__":
     main()
